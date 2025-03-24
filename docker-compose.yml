@@ -1,0 +1,92 @@
+services:
+    evolution:
+        image: atendai/evolution-api:v2.2.3
+        restart: unless-stopped
+        env_file:
+            - .env
+        ports:
+            - '3777:8080'
+        volumes:
+            - evolution_store:/evolution/store
+            - evolution_instances:/evolution/instances
+        depends_on:
+            evolution-db:
+                condition: service_healthy
+        networks:
+            - n8n-medeiros
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+
+    evolution-db:
+        image: postgres:17-alpine
+        container_name: evolution-db
+        env_file:
+            - .env
+        restart: unless-stopped
+        volumes:
+            - evolution_db:/var/lib/postgresql/data
+        networks:
+            - n8n-medeiros
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-U', 'postgres']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+
+    n8n-medeiros:
+        image: n8nio/n8n
+        restart: unless-stopped
+        ports:
+            - '3779:5678'
+        env_file:
+            - .env
+        volumes:
+            - n8n_data:/home/node/.n8n
+        depends_on:
+            redis:
+                condition: service_healthy
+        networks:
+            - n8n-medeiros
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+
+    redis:
+        image: redis:alpine
+        restart: unless-stopped
+        volumes:
+            - redis_data:/data
+        networks:
+            - n8n-medeiros
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 5s
+            timeout: 3s
+            retries: 3
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+
+volumes:
+    evolution_store:
+    evolution_instances:
+    n8n_data:
+    redis_data:
+    evolution_db:
+
+networks:
+    n8n-medeiros:
+        name: n8n-medeiros
+        external: true
