@@ -28,6 +28,8 @@ services:
         restart: unless-stopped
         volumes:
             - evolution_db:/var/lib/postgresql/data
+        ports:
+            - '5423:5432'
         networks:
             - n8n-medeiros
         healthcheck:
